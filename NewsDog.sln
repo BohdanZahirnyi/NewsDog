@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.3.32929.385
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "Infrastructure\Infrastructure.csproj", "{7E631E87-02A3-4A7B-9701-AC5A4F3C9E6C}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NewsDogBackgroundService", "NewsDogBackgroundService\NewsDogBackgroundService.csproj", "{0543157C-D0CF-4C4F-8A5B-BDCD6D72710E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{7E631E87-02A3-4A7B-9701-AC5A4F3C9E6C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7E631E87-02A3-4A7B-9701-AC5A4F3C9E6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7E631E87-02A3-4A7B-9701-AC5A4F3C9E6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7E631E87-02A3-4A7B-9701-AC5A4F3C9E6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0543157C-D0CF-4C4F-8A5B-BDCD6D72710E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0543157C-D0CF-4C4F-8A5B-BDCD6D72710E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0543157C-D0CF-4C4F-8A5B-BDCD6D72710E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0543157C-D0CF-4C4F-8A5B-BDCD6D72710E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {EE39695A-3DC9-4EAD-8AF7-183F01F5D886}
+	EndGlobalSection
+EndGlobal
