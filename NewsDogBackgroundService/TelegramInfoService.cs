@@ -4,27 +4,35 @@ using TL;
 using Infrastructure.Interfaces;
 using Infrastructure.Models;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
+using NewsDogBackgroundService;
 
 namespace TelegramTest
 {
     public class TelegramInfoService : BackgroundService
     {
-        private Client TelegramClient { get; set; }
-        private User TelegramUser { get; set; }
-        private readonly Dictionary<long, User> Users = new();
-        private readonly Dictionary<long, ChatBase> Chats = new();
-        private List<Post> AddedPosts { get; set; } 
-        private List<Post> DeletedPosts { get; set; } 
+        private Client _telegramClient { get; set; }
+        private User _telegramUser { get; set; }
+        private readonly Dictionary<long, User> _users;
+        private readonly Dictionary<long, ChatBase> _chats;
+        private List<Post> _addedPosts { get; set; } 
+        private List<Post> _deletedPosts { get; set; }
 
+        private readonly Dictionary<long, SourceGroup> _channelsGroups;
         private readonly IRepository<Post> _repository;
         private readonly ILogger<TelegramInfoService> _logger;
+        private readonly IConfiguration _config;
 
-        public TelegramInfoService(IRepository<Post> repository, ILogger<TelegramInfoService> logger)
+        public TelegramInfoService(IRepository<Post> repository, ILogger<TelegramInfoService> logger, IConfiguration config)
         {
             _repository = repository;
-            AddedPosts = new List<Post>();
-            DeletedPosts = new List<Post>();
+            _addedPosts = new();
+            _deletedPosts = new();
+            _users = new();
+            _chats = new();
             _logger = logger;
+            _config = config;
+            _channelsGroups =  _config.GetChannelsGroupsDictionary();
         }
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -32,21 +40,16 @@ namespace TelegramTest
             Console.WriteLine("The program will display updates received for the logged-in user. Press any key to terminate");
             WTelegram.Helpers.Log = (l, s) => System.Diagnostics.Debug.WriteLine(s);
 
-            //To insert!
-            Environment.SetEnvironmentVariable("api_id", "");
-            Environment.SetEnvironmentVariable("api_hash", "");
-            Environment.SetEnvironmentVariable("phone_number", "");
-
-            using (TelegramClient = new Client(Environment.GetEnvironmentVariable))
+            using (_telegramClient = new Client(_config.GetValue<string>))
             {
-                TelegramClient.OnUpdate += Client_OnUpdate;
-                TelegramUser = await TelegramClient.LoginUserIfNeeded();
-                Users[TelegramUser.id] = TelegramUser;
+                _telegramClient.OnUpdate += Client_OnUpdate;
+                _telegramUser = await _telegramClient.LoginUserIfNeeded();
+                _users[_telegramUser.id] = _telegramUser;
 
-                Console.WriteLine($"We are logged-in as {TelegramUser.username ?? TelegramUser.first_name + " " + TelegramUser.last_name} (id {TelegramUser.id})");
+                Console.WriteLine($"We are logged-in as {_telegramUser.username ?? _telegramUser.first_name + " " + _telegramUser.last_name} (id {_telegramUser.id})");
 
-                var dialogs = await TelegramClient.Messages_GetAllDialogs();
-                dialogs.CollectUsersChats(Users, Chats);
+                var dialogs = await _telegramClient.Messages_GetAllDialogs();
+                dialogs.CollectUsersChats(_users, _chats);
                 Console.ReadKey();
             }
         }
@@ -55,16 +58,12 @@ namespace TelegramTest
         {
             try
             {
-                if (arg is not UpdatesBase updates) return;
-                updates.CollectUsersChats(Users, Chats);
+                if (arg is not UpdatesBase updates)
+                {
+                    return;
+                }
 
-                ////to get only desired updates
-                //var status = updates.UpdateList.Where(x => x is TL.UpdateUserStatus).FirstOrDefault();
-                //if (status is not null)
-                //{
-                //    return;
-                //}
-                ////
+                updates.CollectUsersChats(_users, _chats);
 
                 foreach (var update in updates.UpdateList)
                     switch (update)
@@ -73,13 +72,12 @@ namespace TelegramTest
                         case UpdateDeleteChannelMessages udcm: DeleteMessage(udcm); break;
                     }
 
-                _repository.Add(AddedPosts);
-                //_repository.Add(new List<Post> { new Post { Id = 1, ChannelName = "asdasd", ChannelId = 1, CreatedAt = DateTime.Now, Message = "Asdasd" } });
-                _repository.Update(DeletedPosts);
+                _repository.Add(_addedPosts);
+                _repository.Update(_deletedPosts);
                 _repository.SaveChanges();
 
-                AddedPosts.Clear();
-                DeletedPosts.Clear();
+                _addedPosts.Clear();
+                _deletedPosts.Clear();
             }
             catch(Exception e)
             {
@@ -90,25 +88,32 @@ namespace TelegramTest
 
         private void AddNewMessage(UpdateNewMessage newMessageEvent)
         {
+            var messageInfo = (Message)newMessageEvent.message;
             var post = new Post();
-            post.Id = newMessageEvent.message.ID;
-            var message = newMessageEvent.message;
-            post.Message = ((Message)message).message;
-            post.ChannelId = ((Message)message).peer_id.ID;
-            post.ChannelName = Chats.Where(x => x.Key == post.ChannelId).Select(x => x.Value.Title).FirstOrDefault();
-            post.CreatedAt = ((Message)message).date;
 
-            AddedPosts.Add(post);
+            post.Id = newMessageEvent.message.ID;
+            post.Message = messageInfo.message;
+            post.ChannelId = messageInfo.peer_id.ID;
+            post.ChannelName = _chats.Where(x => x.Key == post.ChannelId).Select(x => x.Value.Title).FirstOrDefault();
+            post.CreatedAt = DateTime.Now;
+            post.Group = GetGroupForChannel(post.ChannelId);
+            post.HasMedia = messageInfo.flags.HasFlag(Message.Flags.has_media);
+
+            _addedPosts.Add(post);
         }
         private void DeleteMessage(UpdateDeleteChannelMessages deletedMessageEvent)
         {
             var posts =  _repository.GetRange(deletedMessageEvent.messages.ToList());
-            
-            foreach(var post in posts)
+            foreach (var post in posts)
             {
                 post.DeletedAt = DateTime.Now;
             }
-            DeletedPosts.AddRange(posts);
+            _deletedPosts.AddRange(posts);
         }
+
+        private SourceGroup GetGroupForChannel(long channelId) =>
+            _channelsGroups.Where(x => x.Key == channelId).Select(y => y.Value).FirstOrDefault();
+
     }
 }
+

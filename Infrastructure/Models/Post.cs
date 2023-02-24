@@ -18,6 +18,8 @@ namespace Infrastructure.Models
         public string ChannelName { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? DeletedAt { get; set; }
+        public bool HasMedia { get; set; }
+        public SourceGroup Group { get; set; }
 
     }
 }
